@@ -25,6 +25,13 @@ jobs:
         rm -rf $HOME/theos
         git clone --recursive https://github.com/theos/theos.git $HOME/theos
         
+    - name: Install ldid
+      run: |
+        # تثبيت ldid يدوياً
+        curl -L https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macos_x86_64 -o /usr/local/bin/ldid
+        chmod +x /usr/local/bin/ldid
+        ldid -v
+        
     - name: Download ImGui
       run: |
         rm -rf imgui
@@ -33,10 +40,8 @@ jobs:
         curl -L "https://github.com/ocornut/imgui/archive/refs/tags/v1.89.9.tar.gz" -o imgui.tar.gz
         tar -xzf imgui.tar.gz --strip-components=1
         rm imgui.tar.gz
-        # نقل الملفات بدلاً من نسخها
         mv imgui.cpp imgui.h imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp imgui_demo.cpp . 2>/dev/null || true
         mv backends/imgui_impl_metal.h backends/imgui_impl_metal.mm . 2>/dev/null || true
-        # إنشاء placeholder لـ OSX backend
         echo '#pragma once' > imgui_impl_osx.h
         echo 'inline void ImGui_ImplOSX_Init(void*) {}' >> imgui_impl_osx.h
         echo 'inline void ImGui_ImplOSX_Shutdown() {}' >> imgui_impl_osx.h
@@ -47,6 +52,7 @@ jobs:
     - name: Build dylib
       run: |
         export THEOS=$HOME/theos
+        export PATH="/usr/local/bin:$PATH"
         make clean
         make
         
