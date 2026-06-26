@@ -1,103 +1,16 @@
-name: Build OneStateMod dylib
+Run mkdir -p imgui
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
 
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
 
-jobs:
-  build:
-    runs-on: macos-14  # macOS فقط - Theos يحتاج macOS
-    
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      
-    - name: Install Homebrew Dependencies
-      run: |
-        # إصلاح مشكلة Homebrew trust
-        export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
-        brew untap aws/tap 2>/dev/null || true
-        brew update || true
-        
-    - name: Install Theos Dependencies
-      run: |
-        export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
-        brew install dpkg xz make || true
-        # تثبيت ldid يدوياً
-        curl -L https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macos_x86_64 -o /usr/local/bin/ldid
-        chmod +x /usr/local/bin/ldid
-        
-    - name: Install Theos
-      run: |
-        # تثبيت Theos يدوياً بدون Homebrew
-        export THEOS=$HOME/theos
-        git clone --recursive https://github.com/theos/theos.git $THEOS
-        echo "THEOS=$THEOS" >> $GITHUB_ENV
-        echo "$THEOS/bin" >> $GITHUB_PATH
-        
-    - name: Download ImGui
-      run: |
-        mkdir -p imgui
-        cd imgui
-        curl -L "https://github.com/ocornut/imgui/archive/refs/tags/v1.89.9.tar.gz" -o imgui.tar.gz
-        tar -xzf imgui.tar.gz --strip-components=1
-        rm imgui.tar.gz
-        cp imgui.cpp imgui.h imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp imgui_demo.cpp .
-        cp backends/imgui_impl_metal.* backends/imgui_impl_osx.* .
-        cd ..
-        
-    - name: Build dylib
-      run: |
-        export THEOS=$HOME/theos
-        make clean
-        make
-        
-    - name: Verify Build
-      run: |
-        ls -la .theos/obj/
-        file .theos/obj/OneStateMod.dylib
-        
-    - name: Upload dylib Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: OneStateMod-dylib
-        path: .theos/obj/OneStateMod.dylib
-        retention-days: 30
-        
-    - name: Create Release
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v${{ github.run_number }}
-        name: OneStateMod dylib v${{ github.run_number }}
-        body: |
-          ## OneStateMod dylib - Build ${{ github.run_number }}
-          
-          ### How to use:
-          1. Download `OneStateMod.dylib`
-          2. Sign with your certificate on device (Esign, TrollStore, etc.)
-          3. Inject into OneState app using:
-             - TrollFools
-             - Esign
-             - Sideloadly
-             - Any dylib injector
-          
-          ### Features:
-          - ESP (Box, Skeleton, Health, Lines)
-          - Aimbot (Silent, FOV, Smooth)
-          - Player Mods (God Mode, Speed, Fly)
-          - Vehicle Mods (Speed, Fly, Drift)
-          - Anti-Ban, Remove Ads
-          
-          ### Login:
-          - Default: admin / 123456
-          - Or use "Skip Login" for offline mode
-          
-          ### Note:
-          This dylib is unsigned. You must sign it with your own certificate before injecting.
-        files: .theos/obj/OneStateMod.dylib
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+100 1380k    0 1380k    0     0  2169k      0 --:--:-- --:--:-- --:--:-- 2169k
+100 1571k    0 1571k    0     0  2452k      0 --:--:-- --:--:-- --:--:-- 46.7M
+cp: ./imgui.cpp and imgui.cpp are identical (not copied).
+cp: ./imgui.h and imgui.h are identical (not copied).
+cp: ./imgui_draw.cpp and imgui_draw.cpp are identical (not copied).
+cp: ./imgui_tables.cpp and imgui_tables.cpp are identical (not copied).
+cp: ./imgui_widgets.cpp and imgui_widgets.cpp are identical (not copied).
+cp: ./imgui_demo.cpp and imgui_demo.cpp are identical (not copied).
+Error: Process completed with exit code 1.
