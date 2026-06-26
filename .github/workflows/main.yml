@@ -33,47 +33,15 @@ jobs:
         curl -L "https://github.com/ocornut/imgui/archive/refs/tags/v1.89.9.tar.gz" -o imgui.tar.gz
         tar -xzf imgui.tar.gz --strip-components=1
         rm imgui.tar.gz
-        # نسخ ملفات ImGui الأساسية
-        cp imgui.cpp imgui.h imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp imgui_demo.cpp .
-        # نسخ backend Metal فقط
-        cp backends/imgui_impl_metal.* .
-        # إنشاء iOS backend مخصص
-        cat > imgui_impl_ios.h << 'EOF'
-        #pragma once
-        #include "imgui.h"
-        #ifdef __OBJC__
-        @class UIView;
-        @class UIEvent;
-        #endif
-        IMGUI_IMPL_API bool ImGui_ImplIOS_Init(void* view);
-        IMGUI_IMPL_API void ImGui_ImplIOS_Shutdown();
-        IMGUI_IMPL_API void ImGui_ImplIOS_NewFrame();
-        IMGUI_IMPL_API bool ImGui_ImplIOS_HandleEvent(void* event, void* view);
-        EOF
-        cat > imgui_impl_ios.mm << 'EOF'
-        #include "imgui_impl_ios.h"
-        #include "imgui.h"
-        #import <UIKit/UIKit.h>
-        #import <Foundation/Foundation.h>
-        
-        bool ImGui_ImplIOS_Init(void* view) {
-            ImGuiIO& io = ImGui::GetIO();
-            io.BackendPlatformName = "imgui_impl_ios";
-            return true;
-        }
-        
-        void ImGui_ImplIOS_Shutdown() {}
-        
-        void ImGui_ImplIOS_NewFrame() {
-            ImGuiIO& io = ImGui::GetIO();
-            io.DisplaySize = ImVec2(375, 812);
-            io.DeltaTime = 1.0f / 60.0f;
-        }
-        
-        bool ImGui_ImplIOS_HandleEvent(void* event, void* view) {
-            return false;
-        }
-        EOF
+        # نقل الملفات بدلاً من نسخها
+        mv imgui.cpp imgui.h imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp imgui_demo.cpp . 2>/dev/null || true
+        mv backends/imgui_impl_metal.h backends/imgui_impl_metal.mm . 2>/dev/null || true
+        # إنشاء placeholder لـ OSX backend
+        echo '#pragma once' > imgui_impl_osx.h
+        echo 'inline void ImGui_ImplOSX_Init(void*) {}' >> imgui_impl_osx.h
+        echo 'inline void ImGui_ImplOSX_Shutdown() {}' >> imgui_impl_osx.h
+        echo 'inline void ImGui_ImplOSX_NewFrame() {}' >> imgui_impl_osx.h
+        echo '#include "imgui_impl_osx.h"' > imgui_impl_osx.mm
         cd ..
         
     - name: Build dylib
