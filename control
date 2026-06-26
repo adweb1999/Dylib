@@ -1,0 +1,9 @@
+Package: com.yourname.onestatemod
+Name: OneState Mod
+Depends: mobilesubstrate
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: OneState Mod Menu - dylib for injection
+Maintainer: YourName
+Author: YourName
+Section: Tweaks
