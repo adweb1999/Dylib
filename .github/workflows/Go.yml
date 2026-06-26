@@ -1,1 +1,85 @@
 
+name: Build OneStateMod dylib
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Install Theos
+      run: |
+        bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+        
+    - name: Download ImGui
+      run: |
+        mkdir -p imgui
+        cd imgui
+        curl -L "https://github.com/ocornut/imgui/archive/refs/tags/v1.89.9.tar.gz" -o imgui.tar.gz
+        tar -xzf imgui.tar.gz --strip-components=1
+        rm imgui.tar.gz
+        cp imgui.cpp imgui.h imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp imgui_demo.cpp .
+        cp backends/imgui_impl_metal.* backends/imgui_impl_osx.* .
+        cd ..
+        
+    - name: Build dylib
+      run: |
+        export THEOS=$HOME/theos
+        make clean
+        make
+        
+    - name: Verify Build
+      run: |
+        ls -la .theos/obj/
+        file .theos/obj/OneStateMod.dylib
+        
+    - name: Upload dylib Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: OneStateMod-dylib
+        path: .theos/obj/OneStateMod.dylib
+        retention-days: 30
+        
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ github.run_number }}
+        name: OneStateMod dylib v${{ github.run_number }}
+        body: |
+          ## OneStateMod dylib - Build ${{ github.run_number }}
+          
+          ### How to use:
+          1. Download `OneStateMod.dylib`
+          2. Sign with your certificate on device (Esign, TrollStore, etc.)
+          3. Inject into OneState app using:
+             - TrollFools
+             - Esign
+             - Sideloadly
+             - Any dylib injector
+          
+          ### Features:
+          - ESP (Box, Skeleton, Health, Lines)
+          - Aimbot (Silent, FOV, Smooth)
+          - Player Mods (God Mode, Speed, Fly)
+          - Vehicle Mods (Speed, Fly, Drift)
+          - Anti-Ban, Remove Ads
+          
+          ### Login:
+          - Default: admin / 123456
+          - Or use "Skip Login" for offline mode
+          
+          ### Note:
+          This dylib is unsigned. You must sign it with your own certificate before injecting.
+        files: .theos/obj/OneStateMod.dylib
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
