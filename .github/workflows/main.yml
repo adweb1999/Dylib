@@ -1,25 +1,42 @@
 name: Build OneStateMod dylib
 
 on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # استخدام Linux بدلاً من macOS
+    runs-on: macos-14  # macOS فقط - Theos يحتاج macOS
     
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
       
-    - name: Install Cross-Compiler
+    - name: Install Homebrew Dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y clang llvm ldid
+        # إصلاح مشكلة Homebrew trust
+        export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+        brew untap aws/tap 2>/dev/null || true
+        brew update || true
         
-    - name: Download Theos
+    - name: Install Theos Dependencies
       run: |
-        git clone --recursive https://github.com/theos/theos.git $HOME/theos
-        echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+        export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+        brew install dpkg xz make || true
+        # تثبيت ldid يدوياً
+        curl -L https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macos_x86_64 -o /usr/local/bin/ldid
+        chmod +x /usr/local/bin/ldid
+        
+    - name: Install Theos
+      run: |
+        # تثبيت Theos يدوياً بدون Homebrew
+        export THEOS=$HOME/theos
+        git clone --recursive https://github.com/theos/theos.git $THEOS
+        echo "THEOS=$THEOS" >> $GITHUB_ENV
+        echo "$THEOS/bin" >> $GITHUB_PATH
         
     - name: Download ImGui
       run: |
@@ -38,8 +55,49 @@ jobs:
         make clean
         make
         
-    - name: Upload dylib
+    - name: Verify Build
+      run: |
+        ls -la .theos/obj/
+        file .theos/obj/OneStateMod.dylib
+        
+    - name: Upload dylib Artifact
       uses: actions/upload-artifact@v4
       with:
         name: OneStateMod-dylib
         path: .theos/obj/OneStateMod.dylib
+        retention-days: 30
+        
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ github.run_number }}
+        name: OneStateMod dylib v${{ github.run_number }}
+        body: |
+          ## OneStateMod dylib - Build ${{ github.run_number }}
+          
+          ### How to use:
+          1. Download `OneStateMod.dylib`
+          2. Sign with your certificate on device (Esign, TrollStore, etc.)
+          3. Inject into OneState app using:
+             - TrollFools
+             - Esign
+             - Sideloadly
+             - Any dylib injector
+          
+          ### Features:
+          - ESP (Box, Skeleton, Health, Lines)
+          - Aimbot (Silent, FOV, Smooth)
+          - Player Mods (God Mode, Speed, Fly)
+          - Vehicle Mods (Speed, Fly, Drift)
+          - Anti-Ban, Remove Ads
+          
+          ### Login:
+          - Default: admin / 123456
+          - Or use "Skip Login" for offline mode
+          
+          ### Note:
+          This dylib is unsigned. You must sign it with your own certificate before injecting.
+        files: .theos/obj/OneStateMod.dylib
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
