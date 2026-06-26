@@ -1,0 +1,45 @@
+name: Build OneStateMod dylib
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # استخدام Linux بدلاً من macOS
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Install Cross-Compiler
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang llvm ldid
+        
+    - name: Download Theos
+      run: |
+        git clone --recursive https://github.com/theos/theos.git $HOME/theos
+        echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+        
+    - name: Download ImGui
+      run: |
+        mkdir -p imgui
+        cd imgui
+        curl -L "https://github.com/ocornut/imgui/archive/refs/tags/v1.89.9.tar.gz" -o imgui.tar.gz
+        tar -xzf imgui.tar.gz --strip-components=1
+        rm imgui.tar.gz
+        cp imgui.cpp imgui.h imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp imgui_demo.cpp .
+        cp backends/imgui_impl_metal.* backends/imgui_impl_osx.* .
+        cd ..
+        
+    - name: Build dylib
+      run: |
+        export THEOS=$HOME/theos
+        make clean
+        make
+        
+    - name: Upload dylib
+      uses: actions/upload-artifact@v4
+      with:
+        name: OneStateMod-dylib
+        path: .theos/obj/OneStateMod.dylib
