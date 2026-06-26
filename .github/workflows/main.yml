@@ -1,16 +1,57 @@
-Run mkdir -p imgui
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
+name: Build OneStateMod dylib
 
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
 
-100 1380k    0 1380k    0     0  2169k      0 --:--:-- --:--:-- --:--:-- 2169k
-100 1571k    0 1571k    0     0  2452k      0 --:--:-- --:--:-- --:--:-- 46.7M
-cp: ./imgui.cpp and imgui.cpp are identical (not copied).
-cp: ./imgui.h and imgui.h are identical (not copied).
-cp: ./imgui_draw.cpp and imgui_draw.cpp are identical (not copied).
-cp: ./imgui_tables.cpp and imgui_tables.cpp are identical (not copied).
-cp: ./imgui_widgets.cpp and imgui_widgets.cpp are identical (not copied).
-cp: ./imgui_demo.cpp and imgui_demo.cpp are identical (not copied).
-Error: Process completed with exit code 1.
+jobs:
+  build:
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Environment
+      run: |
+        echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+        echo "$HOME/theos/bin" >> $GITHUB_PATH
+        
+    - name: Install Theos
+      run: |
+        rm -rf $HOME/theos
+        git clone --recursive https://github.com/theos/theos.git $HOME/theos
+        
+    - name: Download ImGui
+      run: |
+        rm -rf imgui
+        mkdir -p imgui
+        cd imgui
+        curl -L "https://github.com/ocornut/imgui/archive/refs/tags/v1.89.9.tar.gz" -o imgui.tar.gz
+        tar -xzf imgui.tar.gz --strip-components=1
+        rm imgui.tar.gz
+        # نسخ الملفات بأمان (تجاهل الأخطاء)
+        cp imgui.cpp imgui.h imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp imgui_demo.cpp . 2>/dev/null || true
+        cp backends/imgui_impl_metal.* backends/imgui_impl_osx.* . 2>/dev/null || true
+        cd ..
+        
+    - name: Build dylib
+      run: |
+        export THEOS=$HOME/theos
+        make clean
+        make
+        
+    - name: Verify Build
+      run: |
+        ls -la .theos/obj/
+        file .theos/obj/OneStateMod.dylib
+        
+    - name: Upload dylib Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: OneStateMod-dylib
+        path: .theos/obj/OneStateMod.dylib
+        retention-days: 30
